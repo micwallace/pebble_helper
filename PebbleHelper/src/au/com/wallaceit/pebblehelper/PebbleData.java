@@ -52,7 +52,6 @@ public class PebbleData {
 		class NewQuoteTask extends AsyncTask<Boolean, Void, Void> {
 		    protected Void doInBackground(Boolean... clear) {
 		    	JSONObject jsonobj = getJSONFromUrl("http://www.iheartquotes.com/api/v1/random?format=json&max_characters=300");
-		    	
 		    	String quote;
 		    	String qsrc;
 		    	try {
@@ -66,37 +65,30 @@ public class PebbleData {
 		    	}
 		    	System.out.println(quote+" LENGTH:"+quote.length());
 		    	// send quote to pebble
-		    	// Build up a Pebble dictionary containing the weather icon and the current temperature in degrees celsius
-		    	PebbleDictionary data = new PebbleDictionary();
-		    	if (clear[0]){
-		    		data.addInt32(QUOTE_CLEAR, QUOTE_CLEAR);
-		    	}
-		    	data.addString(QUOTE_TXT, quote.substring(0, (quote.length()>100?100:quote.length())));
-		    	//data.addString(QUOTE_SRC, qsrc);
-		    	// Send the assembled dictionary to the weather watch-app; this is a no-op if the app isn't running or is not
-		    	// installed
-		    	PebbleKit.sendDataToPebble(context, QUOTES_UUID, data);
-		    	System.out.println("Message sent: data");
-		    	if (quote.length()>100){
-		    		String[] bits = splitstr(quote.substring(100), 100);
-		    		for (int i=0; i<bits.length; i++){
-		    			data = new PebbleDictionary();
-		    			data.addString(QUOTE_TXT, bits[i]);
-		    			if (i == (bits.length-1)){
-		    				data.addInt32(QUOTE_END, QUOTE_END);
-		    				System.out.println("last message"); // last message
-		    			}
-		    			try {
-							Thread.sleep(300);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-		    			PebbleKit.sendDataToPebble(context, QUOTES_UUID, data);
-		    			System.out.println("Message sent: extra-data "+i);
+		    	PebbleDictionary data;
+		    	// split into 100 byte chunks
+		    	String[] bits = splitstr(quote, 100);
+		    	for (int i=0; i<bits.length; i++){
+		    		data = new PebbleDictionary();
+		    		data.addString(QUOTE_TXT, bits[i]);
+		    		//data.addString(QUOTE_SRC, qsrc);
+		    		// if this is the first chunk send clear indicator
+		    		if (i == 0){
+				    	data.addInt32(QUOTE_CLEAR, QUOTE_CLEAR);
 		    		}
-		    	}
-		    		
+		    		// if this is the last chunk send update indicator
+		    		if (i == (bits.length-1)){
+		    			data.addInt32(QUOTE_END, QUOTE_END);
+		    		}
+		    		// sleep for 300, ensures we dont fill the pebbles buffer to quick
+		    		try {
+						Thread.sleep(300);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+		    		PebbleKit.sendDataToPebble(context, QUOTES_UUID, data);
+		    		System.out.println("Message sent: data "+i);
+		    	}	
 		    	isgettingquote = false;
 		    	return null;
 		    }
